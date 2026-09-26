@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
-import { BarChart2, Upload, Brain, TrendingUp, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { BarChart2, Upload, Brain, TrendingUp, AlertTriangle, CheckCircle2, Loader2, Database, Calculator } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, ScatterChart, Scatter, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { analyzeDataset, suggestCharts, type DataColumn, type AnalysisResult, type ChartSpec } from '@/lib/analysis-engine';
+import EthereumValuePanel from '@/components/EthereumValuePanel';
+import MiningEconomicsPanel from '@/components/MiningEconomicsPanel';
 
 // AI Data Analyst — ⚸ Analysis Condenser
 // Offline-first: drag-drop CSV/JSON, local stats, AI-enhanced when Jacky/Ollama running
@@ -83,7 +85,16 @@ function ChartRenderer({ spec }: { spec: ChartSpec }) {
   );
 }
 
+type Tab = 'analyst' | 'ethereum' | 'mining';
+
+const TABS: { id: Tab; label: string; Icon: typeof BarChart2 }[] = [
+  { id: 'analyst', label: 'Data Analyst', Icon: BarChart2 },
+  { id: 'ethereum', label: 'Ethereum Value', Icon: Database },
+  { id: 'mining', label: 'Mining Economics', Icon: Calculator },
+];
+
 export default function App() {
+  const [tab, setTab] = useState<Tab>('analyst');
   const [columns, setColumns] = useState<DataColumn[]>([]);
   const [rowCount, setRowCount] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -92,14 +103,9 @@ export default function App() {
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
 
-  const processFile = useCallback(async (file: File) => {
+  const runAnalysis = useCallback(async (parsed: { columns: DataColumn[]; rowCount: number }, name: string) => {
     setError(''); setResult(null); setCharts([]);
-    setFileName(file.name);
-    const text = await file.text();
-    let parsed: { columns: DataColumn[]; rowCount: number };
-
-    if (file.name.endsWith('.json')) parsed = parseJSON(text);
-    else parsed = parseCSV(text);
+    setFileName(name);
 
     if (parsed.columns.length === 0) {
       setError('Could not parse file. Ensure it is a valid CSV or JSON array.');
@@ -124,6 +130,16 @@ export default function App() {
     }
   }, []);
 
+  const processFile = useCallback(async (file: File) => {
+    const text = await file.text();
+    await runAnalysis(file.name.endsWith('.json') ? parseJSON(text) : parseCSV(text), file.name);
+  }, [runAnalysis]);
+
+  const analyzeExternal = useCallback((cols: DataColumn[], count: number, name: string) => {
+    setTab('analyst');
+    runAnalysis({ columns: cols, rowCount: count }, name);
+  }, [runAnalysis]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -146,7 +162,22 @@ export default function App() {
             <span className="text-xs px-2 py-0.5 rounded border border-slate-700 text-slate-400">⚸ Analysis Condenser</span>
           </div>
           <p className="text-xs text-slate-500">Offline-first · Jacky-ready · Ollama-ready · Drop CSV or JSON</p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {TABS.map(({ id, label, Icon }) => (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors ${
+                  tab === id ? 'border-blue-500/60 bg-blue-500/10 text-blue-300' : 'border-slate-800 text-slate-400 hover:text-slate-200'}`}>
+                <Icon className="w-3.5 h-3.5" /> {label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Kept mounted so fetched data and inputs survive tab switches */}
+        <div className={tab === 'ethereum' ? '' : 'hidden'}><EthereumValuePanel onAnalyze={analyzeExternal} /></div>
+        <div className={tab === 'mining' ? '' : 'hidden'}><MiningEconomicsPanel /></div>
+
+        {tab === 'analyst' && (<>
 
         {/* Drop zone */}
         {!fileName && (
@@ -238,6 +269,7 @@ export default function App() {
             )}
           </div>
         )}
+        </>)}
       </div>
     </div>
   );
