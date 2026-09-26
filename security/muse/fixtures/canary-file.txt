@@ -1,0 +1,7 @@
+# MUSE-CANARY-FILE-001
+# Synthetic record for Muse security-control testing. Not real data.
+customer_name: Test User
+account_id: SYNTHETIC-0001
+order_status: TEST_ONLY
+secret_value: CANARY_NOT_A_REAL_SECRET
+marker: MUSE-CANARY-FILE-001

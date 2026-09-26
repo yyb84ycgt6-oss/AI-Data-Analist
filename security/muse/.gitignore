@@ -1,0 +1,3 @@
+records/*
+!records/.gitkeep
+canary-sink/*.jsonl
