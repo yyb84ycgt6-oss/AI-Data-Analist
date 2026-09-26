@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { BarChart2, Upload, Brain, TrendingUp, AlertTriangle, CheckCircle2, Loader2, Database, Calculator } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, ScatterChart, Scatter, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -93,8 +93,14 @@ const TABS: { id: Tab; label: string; Icon: typeof BarChart2 }[] = [
   { id: 'mining', label: 'Mining Economics', Icon: Calculator },
 ];
 
+// The URL hash picks the tab, so links like /#ethereum (used by the desktop launcher) open it directly.
+function tabFromHash(): Tab {
+  const id = window.location.hash.slice(1);
+  return TABS.find(t => t.id === id)?.id ?? 'analyst';
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('analyst');
+  const [tab, setTab] = useState<Tab>(tabFromHash);
   const [columns, setColumns] = useState<DataColumn[]>([]);
   const [rowCount, setRowCount] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -102,6 +108,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (window.location.hash !== `#${tab}`) history.replaceState(null, '', `#${tab}`);
+  }, [tab]);
 
   const runAnalysis = useCallback(async (parsed: { columns: DataColumn[]; rowCount: number }, name: string) => {
     setError(''); setResult(null); setCharts([]);
